@@ -1,5 +1,6 @@
 package com.dh.chat.mediator;
 
+import com.dh.chat.Messages;
 import com.dh.chat.model.Group;
 import com.dh.chat.model.Message;
 import com.dh.chat.model.User;
@@ -44,9 +45,9 @@ public class ChatMediatorImpl implements ChatMediator
 
     @Override
     public void signIn(User... users) {
-        for(User user:users){
-            this.signIn(user.getUserName(),user.getPassword());
-        }
+            for(User user:users){
+                this.signIn(user.getUserName(),user.getPassword());
+            }
     }
 
     @Override
@@ -95,13 +96,14 @@ public class ChatMediatorImpl implements ChatMediator
         User userR = this.findUser(userName);
 
         if(chat.getRegisteredUsers().size()<1||userR==null){
-            System.out.println("Warning!: "+userName+" is not registered.");
+            System.out.println(Messages.USER_IS_NOT_REGISTERED(userName));
         }else{
             if(password.equals(userR.getPassword())){
                 chat.getLoggedUsers().add(userR);
-                System.out.println(userR+" just logged in.");
+                System.out.println(Messages.USER_JUST_LOGGED_IN(userR));
+
             }else{
-                System.out.println("Error: user password do not match. Try again!");
+                System.out.println(Messages.USER_PASSWORD_DOES_NOT_MATCH);
             }
         }
     }
@@ -113,9 +115,11 @@ public class ChatMediatorImpl implements ChatMediator
         User u = getUserIn(user.getUserName(),lUsers);
         if(u!=null){
             lUsers.remove(u);
-            System.out.println(u+" has left.");
+
+            System.out.println(Messages.USER_HAS_LEFT(u));
         }else{
-            System.out.println(user+ " is not logged in.");
+            System.out.println(Messages.USER_NOT_LOGGED_IN(user));
+
         }
     }
 
@@ -135,12 +139,12 @@ public class ChatMediatorImpl implements ChatMediator
         User fUser = findUser(to.getUserName());
 
         if(!findUserNameIn(message.getUserName(),chat.getLoggedUsers())){
-            System.out.println("Sorry you are not logged in. Message was not sent.");
+            System.out.println(Messages.NO_LOGIN_NO_MESSAGE);
         }else{
             if(fUser!=null){
                 System.out.println("FROM "+message.getUserName()+" TO "+to+": "+message.getContent());
             }else{
-                System.out.println(to+" was not found, message was not sent.");
+                System.out.println(Messages.NO_USER_NO_MESSAGE(to));
             }
         }
     }
@@ -148,21 +152,45 @@ public class ChatMediatorImpl implements ChatMediator
     @Override
     public void messageToGroup(Group to, Message message) {
         Group fGroup = findGroup(to.getName());
-
-        if(fGroup!=null){
-            if(!findUserNameIn(message.getUserName(),fGroup.getUsers())){
-                System.out.println(message.getUserName()+" does not belong to "+to+", please join first.");
-            }else{
-                System.out.println("FROM: "+getUserIn(message.getUserName(),chat.registeredUsers)+" TO: " +fGroup+" "+message.getContent());
-            }
+        User u = findUser(message.getUserName());
+        if(u.getPremium()||(!u.getPremium()&& fGroup.getPrivate())){
+            System.out.println(Messages.USER_CANT_SEND_MESSAGE_TO_PRIVATE_GROUP(u));
         }else{
-            System.out.println("Group "+to+" does not exists.");
+            if(fGroup!=null){
+                if(!findUserNameIn(message.getUserName(),fGroup.getUsers())){
+                    System.out.println(Messages.USER_DOES_NOT_BELONG_TO(message.getUserName(), to));
+                }else{
+                    System.out.println("FROM: "+getUserIn(message.getUserName(),chat.registeredUsers)+" TO: " +fGroup+" "+message.getContent());
+                }
+            }else{
+                System.out.println(Messages.GROUP_DOES_NOT_EXISTS(to));
+            }
         }
-
     }
 
     @Override
-    public Group findGroup(String name) {
+    public Group findGroup(User user, String name){
+        Group fGroup = findGroup(name);
+
+        if(fGroup!=null){
+            if(fGroup.getPrivate()&&!user.getPremium()){
+                if(!fGroup.getVisible()){
+                    System.out.println(name+ Messages.NOT_FOUND);
+                    return null;
+                }else{
+                    System.out.println(fGroup+Messages.HAS_BEEN_FOUND);
+                }
+            }else {
+                System.out.println(fGroup+Messages.HAS_BEEN_FOUND);
+            }
+        }else{
+            System.out.println(name+ Messages.NOT_FOUND);
+        }
+
+        return fGroup;
+    }
+
+    private Group findGroup(String name) {
         List<Group> groups = this.chat.getGroups();
         for(Group g: groups){
             if(g.getName()==name){
@@ -173,7 +201,30 @@ public class ChatMediatorImpl implements ChatMediator
     }
 
     @Override
+    public Group findGroup(User user, long id){
+        Group fGroup = findGroup(id);
+        if(fGroup==null){
+            System.out.println("Group not found.");
+        }else{
+            if(fGroup.getPrivate()&&!user.getPremium()){
+                System.out.println("Group not found.");
+                return null;
+            }else if(fGroup!=null){
+                System.out.println(fGroup+" has been found");
+            }else{
+                System.out.println("Group with id: "+id+" not found");
+            }
+        }
+        return fGroup;
+    }
+
     public Group findGroup(long id) {
+        List<Group> rGroups = this.chat.getGroups();
+        for(Group g : rGroups){
+            if(id==g.getId()){
+                return g;
+            }
+        }
         return null;
     }
 
@@ -202,8 +253,35 @@ public class ChatMediatorImpl implements ChatMediator
 
     @Override
     public void listUsers(String type) {
+        List<User> us = chat.getRegisteredUsers();
+        int i = 0;
+        boolean isPremiumFilter = (type.equals("Premium"));
+        for(User u:us){
+            if(u.getPremium()==isPremiumFilter){
+                System.out.println(u);
+                i++;
+            }
+        }
+        System.out.println(type+ " users found: "+i);
+    }
+
+    @Override
+    public void listGroups(User user) {
+        List<Group> gs = chat.getGroups();
+        int i = 0;
+        for(Group g:gs){
+            if(g.getPrivate()&&user.getPremium()){
+                System.out.println(g);
+                i++;
+            }else if(!g.getPrivate()){
+                System.out.println(g);
+                i++;
+            }
+        }
+        System.out.println("Groups found: "+i);
 
     }
+
 
     @Override
     public void accessGroup(User user, Group group) {
@@ -217,19 +295,40 @@ public class ChatMediatorImpl implements ChatMediator
     }
 
     @Override
-    public void accessGroup(User user, Group group, String password) {
-        Group fGroup = findGroup(group.getName());
+    public void setGroupVisibility(User user, Group group,boolean visibility) {
         if(!group.getPrivate()){
-            chat.getGroups().add(group);
-            System.out.println(user+" just joined to "+group);
+            System.out.println("Public groups are always visible");
         }else{
-            if(group.getPassword().equals(password)){
-                fGroup.getUsers().add(user);
-                System.out.println(user+" just joined to "+group);
+            if(group.getAdmin().getUserName().equals(user.getUserName())){
+                group.setVisible(visibility);
+                System.out.println("Group is now "+(visibility?"visible.":"invisible."));
             }else{
-                System.out.println("Wrong password for "+group+" please try again.");
+                System.out.println(user+" is not "+ group+" owner.");
             }
         }
+    }
+
+    @Override
+    public void accessGroup(User user, Group group, String password) {
+        Group fGroup = findGroup(group.getName());
+        if(!user.getPremium()){
+            if(!group.getPrivate()){
+                chat.getGroups().add(group);
+                System.out.println(user+" just joined to "+group);
+            }else{
+                if(group.getPassword().equals(password)){
+                    fGroup.getUsers().add(user);
+                    System.out.println(user+" just joined to "+group);
+                }else{
+                    System.out.println("Wrong password for "+group+" please try again.");
+                }
+            }
+        }else{
+            System.out.println(user+". You are not premium user, please upgrade to access private groups.");
+        }
+
+
+
     }
 
     private class Chat{
@@ -266,5 +365,7 @@ public class ChatMediatorImpl implements ChatMediator
         public void setLoggedUsers(List<User> loggedUsers) {
             this.loggedUsers = loggedUsers;
         }
+
+
     }
 }

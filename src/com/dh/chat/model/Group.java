@@ -11,6 +11,15 @@ public class Group {
     private User admin;
     private Boolean isPrivate;
     private List<User> users;
+    private Boolean isVisible;
+
+    public Boolean getVisible() {
+        return isVisible;
+    }
+
+    public void setVisible(Boolean visible) {
+        isVisible = visible;
+    }
 
     public Group(long id, String name, String password, User admin, Boolean isPrivate, List<User> users) {
         this.id = id;
@@ -19,6 +28,8 @@ public class Group {
         this.admin = admin;
         this.isPrivate = isPrivate;
         this.users = users;
+        this.isVisible = !isPrivate;
+
     }
 
     public long getId() {

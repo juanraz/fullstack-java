@@ -20,12 +20,14 @@ public interface ChatMediator {
     public User getUserIn(String userName, List<User> users);
     public void messageToUser(User to, Message message);
     public void messageToGroup(Group to, Message message);
-    public Group findGroup(String name);
-    public Group findGroup(long id);
+    public Group findGroup(User user, String name);
+    public Group findGroup(User user, long id);
     public User findUser(String userName);
     public User findUser(long id);
     public void listUsers(String type);
+    public void listGroups(User user);
     public void accessGroup(User user, Group group);
     public void accessGroup(User user, Group group,String password);
     public void createGroup(User user, Group group);
+    public void setGroupVisibility(User user, Group group,boolean visibility);
 }
